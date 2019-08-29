@@ -1,0 +1,30 @@
+#!/bin/bash
+# Job Name and Files (also --job-name)
+#SBATCH -J {{ job_name }}
+#Output and error (also --output, --error):
+#SBATCH -o ./logs/%j_%A_%a.out
+#SBATCH -e ./logs/%j_%A_%a.err
+#Initial working directory (also --chdir):
+#SBATCH -D ./
+#Notification and type
+#SBATCH --mail-type=END
+#SBATCH --mail-user={{ email }}
+# Wall clock limit:
+#SBATCH --time={{ time }}
+#SBATCH --no-requeue
+#Setup of execution environment
+#SBATCH --export=NONE
+#SBATCH --get-user-env
+#SBATCH --account= {{ project_id }}
+#SBATCH --array=0-{{ n_jobs - 1 }}
+ 
+module load slurm_setup
+echo "My SLURM_ARRAY_TASK_ID: " $SLURM_ARRAY_TASK_ID
+
+RUN_SCRIPTS=() # array of all run scripts
+
+{% for run_config in run_configs %}
+RUN_SCRIPTS[{{ run_config.run_id }}]={{ run_config.file_name}}
+{% endfor %}
+
+eval ./{{executable_name}} "${RUN_SCRIPTS[${SLURM_ARRAY_TASK_ID}]}"

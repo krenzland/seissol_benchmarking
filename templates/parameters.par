@@ -1,0 +1,54 @@
+&Equations
+MaterialFileName = material_snell.yaml
+/
+
+&IniCondition                        ! no initial condition
+cICType = 'Snell'
+/
+
+&Boundaries                          ! activate boundary conditions:
+/
+
+&SourceType
+/
+
+&SpongeLayer
+/
+
+&MeshNml
+MeshFile = {{ mesh_file }}
+meshgenerator = 'PUML'        ! Name of meshgenerator (format)
+/
+
+&Discretization
+Order = 6                            ! Order of accuracy in space and times
+Material = 1                         ! Material order
+CFL = 0.5                            ! CFL number (<=1.0)
+FixTimeStep = 5                      ! Manualy chosen minimum time
+ClusteredLts = 2
+/
+
+&Output
+OutputFile = 'output/conv'
+iOutputMask = 1 1 1 1 1 1 1 1 1      ! Variables ouptut
+iOutputMaskMaterial = 1 1 1          ! Material output
+Format = 6 !10                           ! Format (0=IDL, 1=TECPLOT, 2=IBM DX, 4=GiD))
+refinement = 0
+Interval = 200                       ! Index of printed info at timesteps
+TimeInterval = 2                  ! Index of printed info at time
+printIntervalCriterion = 2           ! Criterion for index of printed info: 1=timesteps,2=time,3=timesteps+time
+pickdt = 0.05                        ! Pickpoint Sampling
+pickDtType = 1                       ! Pickpoint Type
+nRecordPoints = 2                    ! number of Record points which are read from file
+RFileName = 'recordPoints.dat'          ! Record Points in extra file
+/
+
+&Postprocessing
+/
+
+&AbortCriteria
+EndTime = 10.0
+/
+
+&Debugging
+/
