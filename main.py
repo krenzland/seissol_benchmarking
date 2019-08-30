@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import parameters
 
+import argparse
 import os
 import stat
 import subprocess
@@ -46,11 +47,12 @@ def render_templates_from_dicts(template_env,
                                 configs,
                                 executable=[False]):
     for template_name, ex in zip(template_names, executable):
+        template_base, _ = os.path.splitext(template_name)
         template = template_env.get_template(template_name)
         for config in configs:
             complete_config = {**tool_config, **config}
             file_name = os.path.join(config['workdir'], template_name)
-            config['file_name'] = file_name
+            config['file_name_{}'.format(template_base)] = file_name
             print(file_name)
             with open(file_name, 'w') as f:
                 f.write(template.render(complete_config, undefined=StrictUndefined))
@@ -59,19 +61,32 @@ def render_templates_from_dicts(template_env,
                 st = os.stat(file_name)
                 os.chmod(file_name, st.st_mode | stat.S_IEXEC)
 
+def reuse_builds_from_dir(directory):
+    return []
+                
 def build(build_configs):
     for build_config in build_configs:
+        if 'built' in build_config and build_config['built']:
+            print('Skipping build, reusing {}'.format(build_config['file_name_build']))
+            continue
         print(build_config['workdir'])
-        result = subprocess.run(build_config['file_name'],
+        result = subprocess.run(build_config['file_name_build'],
                                 cwd=build_config['workdir'] + '/',
-                                capture_output=True)
+                                stdout=subprocess.PIPE,
+                                stderr=subprocess.PIPE)
+        if result.returncode != 0:
+            print('Job {} failed!'.format(build_config['workdir']))
         for log_name, log in zip(['out', 'err'],
                                  [result.stdout, result.stderr]):
             file_name = '{}.log'.format(log_name)
             file_path = os.path.join(build_config['workdir'], file_name)
-            with open(file_path, 'w') as f:
+            with open(file_path, 'wb') as f:
                 if log:
                     f.write(log)
+        build_config['built'] = True
+        with open(os.path.join(build_config['workdir'], 'build.json'),
+                  'w', encoding='utf-8') as f:
+            json.dump(build_config, f, ensure_ascii=False, indent=4)
 
 
 def symlink_build(run_configs, build_configs, tool_config):
@@ -83,8 +98,26 @@ def symlink_build(run_configs, build_configs, tool_config):
         dst_path = os.path.join(run_config['workdir'],
                                  tool_config['executable_name'])
         os.symlink(src=src_path, dst=dst_path)
+
+def dict_subset_eq(a, b):
+    print("dict_subset_eq")
+    for k, v in a.items():
+        print(k, a[k], b[k])
+        if (a[k] != b[k]):
+            return False
+    return True
+
+def dict_subset_idx_in_list(dictionary, l):
+    for i, e in enumerate(l):
+        if dict_subset_eq(dictionary, e):
+            return i
+    return -1
         
 def main():
+    parser = argparse.ArgumentParser(description='Create scripts from templates.')
+    parser.add_argument('--reuse-binaries', help='Use binaries in workdir.')
+    args = parser.parse_args()
+    
     os.makedirs(parameters.TOOL_CONFIG['workdir_base'], exist_ok=True)
     workdir = create_workdir(workdir_base=parameters.TOOL_CONFIG['workdir_base'])
     print("Workdir = {}".format(workdir))
@@ -93,28 +126,46 @@ def main():
     
     run_config_bases = product_dict(**parameters.RUN_CONFIG[0])
     run_configs = []
-    build_configs_dict = {}
+    #build_configs_dict = {}
     build_config_id = 0
+
+    build_configs = []
+    if args.reuse_binaries:
+        import glob
+        files = glob.glob(args.reuse_binaries + '/**/build.json')
+        max_build_config_id = 0
+        for build_config_path in files:
+            with open(build_config_path, 'r') as f:
+                build_config = json.loads(f.read())
+                build_configs.append(build_config)
+                max_build_config_id = max(build_config_id, build_config['build_id'])
+        build_config_id = max_build_config_id + 1
+
     for run_id, run_config_base in enumerate(run_config_bases):
         run_config = parameters.RUN_CONFIG[1](run_config_base)
-        build_config = json.dumps(parameters.RUN_CONFIG[2](run_config))
-        if build_config not in build_configs_dict:
-            build_configs_dict[build_config] = build_config_id
-            build_config_id += 1
+        build_config = parameters.RUN_CONFIG[2](run_config)
+        #build_config_s = json.dumps(build_config)
+        #if build_config_s not in build_configs_dict:
+        #    build_configs_dict[build_config_s] = build_config_id
+        #    build_config_id += 1
 
-        run_config['build_id'] = build_configs_dict[build_config]
         run_config['run_id'] = run_id
         # TODO: Also append build config json to dict for debugging
 
+        build_id = dict_subset_idx_in_list(build_config, build_configs)
+        if build_id < 0:
+            build_configs.append(build_config)
+            build_id = build_config_id
+            build_config_id += 1
+        build_config['built'] = False
+        build_config['build_id'] = build_id
+        run_config['build_id'] = build_id
+
         run_configs.append(run_config)
 
-    build_configs = {}
-    for k, v in build_configs_dict.items():
-        build_config = json.loads(k)
-        build_config['build_id'] = v
-        build_configs[v] = build_config
+    print(build_configs)
 
-    create_dirs_from_id(workdir, 'build', build_configs.values())
+    create_dirs_from_id(workdir, 'build', build_configs)
     create_dirs_from_id(workdir, 'run', run_configs)
     print(build_configs)
     print()
@@ -124,10 +175,10 @@ def main():
     render_templates_from_dicts(template_env,
                                 parameters.BUILD_CONFIG,
                                 parameters.TOOL_CONFIG,
-                                build_configs.values(),
+                                build_configs,
                                 executable=[True])
-    #build(build_configs.values())
-    #symlink_build(run_configs, build_configs, parameters.TOOL_CONFIG)
+    build(build_configs)
+    symlink_build(run_configs, build_configs, parameters.TOOL_CONFIG)
 
     render_templates_from_dicts(template_env,
                                 parameters.RUN_CONFIG[3],

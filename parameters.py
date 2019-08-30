@@ -13,6 +13,12 @@ def build_config_from_run(run_config):
     }
 
 job_params_base = {
+    'time': '00:30:00',
+    'project_id': 'pr45fi',
+    'email': 'email@example.com',
+    'nodes': 4,
+    'ntasks_per_node': 1,
+    'jobname': 'eaconv'
 }
 
 RUN_CONFIG = (run_params_base,

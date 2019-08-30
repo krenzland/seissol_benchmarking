@@ -7,7 +7,7 @@
 #Initial working directory (also --chdir):
 #SBATCH -D ./
 #Notification and type
-#SBATCH --mail-type=END
+#SBATCH --mail-type=BEGIN,END
 #SBATCH --mail-user={{ email }}
 # Wall clock limit:
 #SBATCH --time={{ time }}
@@ -17,6 +17,10 @@
 #SBATCH --get-user-env
 #SBATCH --account= {{ project_id }}
 #SBATCH --array=0-{{ n_jobs - 1 }}
+
+#SBATCH --nodes={{ nodes }}
+#SBATCH --ntasks-per-node={{ ntasks_per_node }}
+
  
 module load slurm_setup
 echo "My SLURM_ARRAY_TASK_ID: " $SLURM_ARRAY_TASK_ID
@@ -24,7 +28,7 @@ echo "My SLURM_ARRAY_TASK_ID: " $SLURM_ARRAY_TASK_ID
 RUN_SCRIPTS=() # array of all run scripts
 
 {% for run_config in run_configs %}
-RUN_SCRIPTS[{{ run_config.run_id }}]={{ run_config.file_name}}
+RUN_SCRIPTS[{{ run_config.run_id }}]={{ run_config.file_name_run}}
 {% endfor %}
 
-eval ./{{executable_name}} "${RUN_SCRIPTS[${SLURM_ARRAY_TASK_ID}]}"
+exec "bash "${RUN_SCRIPTS[${SLURM_ARRAY_TASK_ID}]}""
