@@ -1,10 +1,13 @@
 #!/usr/bin/env bash
-cp -r /home/ga24dib/src/SeisSol-Coupling ./tmp
+echo "Building..."
+exit 0
+
+cp -r {{ build_root}} ./tmp
 ls
 
 cd tmp 
 ls
-CPPPATH=~/include/ LD_LIBRARY_PATH="/home/ga24dib/lib:${LD_LIBRARY_PATH}" PKG_CONFIG_PATH="/home/ga24dib/lib/pkgconfig/:${PKG_CONFIG_PATH}" scons buildVariablesFile=build/options/supermuc2.py order={{ order }} compiler=intel netcdf=yes hdf5=yes metis=yes asagi=yes zlibDir=~/src/ASAGI/build/lib/ compileMode=relWithDebInfo commThread=false equations=elastic -j12
+scons buildVariablesFile=build/options/marenostrum4.py hdf5=yes netcdf=no order={{ order }} metis=yes commThread=true compileMode=release hdf5Dir=/dss/dsshome1/lrz/sys/spack/release/19.1/opt/x86_avx512/hdf5/1.8.20-intel-6z7sqju -j56
 
 cd ..
 execName="$(find . -executable -print0 | xargs -r -0 ls -1 -t | head -1)" # newest file

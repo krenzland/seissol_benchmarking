@@ -187,6 +187,7 @@ def main():
                                 executable=[True, False])
     
         
+    # TODO(Lukas): Move this to function
     job_config = parameters.JOB_CONFIG[0]
     tool_config = parameters.TOOL_CONFIG
 
@@ -198,11 +199,15 @@ def main():
     job_config['run_configs'] = run_configs
 
     complete_config = {**tool_config, **job_config}
+    complete_config['workdir'] = workdir
     file_name = os.path.join(workdir, template_name)
     config['file_name'] = file_name
     print(file_name)
     with open(file_name, 'w') as f:
         f.write(template.render(complete_config, undefined=StrictUndefined))
+
+    # Create logdir
+    os.makedirs(os.path.join(workdir, 'logs'))
 
 if __name__ == '__main__':
     main()

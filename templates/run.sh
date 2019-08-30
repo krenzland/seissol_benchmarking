@@ -19,7 +19,7 @@ module load slurm_setup
 module load szip
 module load libszip/2.1.1
 
-cd "run_${SLURM_ARRAY_TASK_ID}"
+cd {{ workdir }}
 pwd
 ls
 mkdir output

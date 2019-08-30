@@ -1,5 +1,5 @@
 &Equations
-MaterialFileName = material_snell.yaml
+MaterialFileName = '{{ material_file }}'
 /
 
 &IniCondition                        ! no initial condition
@@ -16,7 +16,7 @@ cICType = 'Snell'
 /
 
 &MeshNml
-MeshFile = {{ mesh_file }}
+MeshFile = '{{ mesh_file }}'
 meshgenerator = 'PUML'        ! Name of meshgenerator (format)
 /
 

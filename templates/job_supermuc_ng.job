@@ -1,26 +1,24 @@
 #!/bin/bash
-# Job Name and Files (also --job-name)
-#SBATCH -J {{ job_name }}
-#Output and error (also --output, --error):
-#SBATCH -o ./logs/%j_%A_%a.out
-#SBATCH -e ./logs/%j_%A_%a.err
-#Initial working directory (also --chdir):
-#SBATCH -D ./
-#Notification and type
-#SBATCH --mail-type=BEGIN,END
-#SBATCH --mail-user={{ email }}
-# Wall clock limit:
-#SBATCH --time={{ time }}
-#SBATCH --no-requeue
-#Setup of execution environment
-#SBATCH --export=NONE
-#SBATCH --get-user-env
-#SBATCH --account= {{ project_id }}
+#SBATCH --account={{ project_id }}
+#SBATCH --partition={{ partition }}
 #SBATCH --array=0-{{ n_jobs - 1 }}
 
 #SBATCH --nodes={{ nodes }}
 #SBATCH --ntasks-per-node={{ ntasks_per_node }}
+#SBATCH --no-requeue
 
+#SBATCH -J {{ job_name }}
+
+#SBATCH -o {{ workdir }}/logs/%j_%A_%a.out
+#SBATCH -e {{ workdir }}/logs/%j_%A_%a.err
+
+#SBATCH -D {{ workdir }}
+
+#SBATCH --mail-type=BEGIN,END,ARRAY_TASKS
+#SBATCH --mail-user={{ email }}
+
+#SBATCH --time={{ time }}
+#SBATCH --export=NONE
  
 module load slurm_setup
 echo "My SLURM_ARRAY_TASK_ID: " $SLURM_ARRAY_TASK_ID
@@ -31,4 +29,4 @@ RUN_SCRIPTS=() # array of all run scripts
 RUN_SCRIPTS[{{ run_config.run_id }}]={{ run_config.file_name_run}}
 {% endfor %}
 
-exec "bash "${RUN_SCRIPTS[${SLURM_ARRAY_TASK_ID}]}""
+exec bash "${RUN_SCRIPTS[${SLURM_ARRAY_TASK_ID}]}"
