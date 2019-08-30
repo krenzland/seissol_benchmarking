@@ -184,7 +184,7 @@ def main():
                                 parameters.RUN_CONFIG[3],
                                 parameters.TOOL_CONFIG,
                                 run_configs,
-                                executable=[True, False])
+                                executable=[True, False, False])
     
         
     # TODO(Lukas): Move this to function

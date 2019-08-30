@@ -25,20 +25,20 @@ job_params_base = {
     'email': 'email@example.com',
     'nodes': 2,
     'ntasks_per_node': 1,
-    'partition': 'micro',
+    'partition': 'test',
     'job_name': 'eaconv'
 }
 
 RUN_CONFIG = (run_params_base,
               process_run_config,
               build_config_from_run,
-              ['run.sh', 'parameters.par'])
+              ['run.sh', 'parameters.par', 'DGPATH'])
 JOB_CONFIG = (job_params_base, 'job_supermuc_ng.job')
 
 BUILD_CONFIG = ['build.sh']
 
 TOOL_CONFIG = {
-    'workdir_base': '/import/home/ga24dib/tmp/seissol_benchmarks/',
+    'workdir_base': '/hppfs/work/pr45fi/ga24dib3/SeisSol/convergence/',
     'executable_name': 'SeisSol',
     'build_root': '/dss/dsshome1/0E/ga24dib3/src/SeisSol/'
 }
