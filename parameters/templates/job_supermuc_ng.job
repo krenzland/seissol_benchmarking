@@ -20,8 +20,16 @@
 #SBATCH --time={{ time }}
 #SBATCH --export=NONE
  
-module load tempdir
 module load slurm_setup
+export LD_LIBRARY_PATH=/dss/dsshome1/0E/ga24dib3/lib:$LD_LIBRARY_PATH
+
+ulimit -Ss 2097152
+
+export MP_SINGLE_THREAD=no
+unset KMP_AFFINITY
+export OMP_NUM_THREADS={{ threads_per_rank }}
+export OMP_PLACES="cores({{ cores_per_rank }})"
+
 echo "My SLURM_ARRAY_TASK_ID: " $SLURM_ARRAY_TASK_ID
 
 RUN_SCRIPTS=() # array of all run scripts

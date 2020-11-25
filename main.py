@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
-import parameters
+from utils import product_dict, dict_subset_eq, dict_subset_idx_in_list
 
+import importlib
 import argparse
+import sys
 import os
 import stat
 import subprocess
@@ -9,13 +11,7 @@ from datetime import datetime
 import itertools
 from jinja2 import Environment, FileSystemLoader, StrictUndefined
 import json
-
-def product_dict(**kwargs):
-    # From https://stackoverflow.com/a/5228294
-    keys = kwargs.keys()
-    vals = kwargs.values()
-    for instance in itertools.product(*vals):
-        yield dict(zip(keys, instance))
+import glob
 
 def create_workdir(workdir_base):
     now = datetime.now()
@@ -99,39 +95,26 @@ def symlink_build(run_configs, build_configs, tool_config):
                                  tool_config['executable_name'])
         os.symlink(src=src_path, dst=dst_path)
 
-def dict_subset_eq(a, b):
-    print("dict_subset_eq")
-    for k, v in a.items():
-        print(k, a[k], b[k])
-        if (a[k] != b[k]):
-            return False
-    return True
+def write_config_as_json(run_configs, build_configs, job_configs):
+    for run_config in run_configs:
+        job_id = run_config['job_id']
+        job_config = job_configs[job_id]
+        build_id = run_config['build_id']
+        build_config = build_configs[build_id]
+        path = run_config['workdir']
 
-def dict_subset_idx_in_list(dictionary, l):
-    for i, e in enumerate(l):
-        if dict_subset_eq(dictionary, e):
-            return i
-    return -1
-        
-def main():
-    parser = argparse.ArgumentParser(description='Create scripts from templates.')
-    parser.add_argument('--reuse-binaries', help='Use binaries in workdir.')
-    args = parser.parse_args()
-    
-    os.makedirs(parameters.TOOL_CONFIG['workdir_base'], exist_ok=True)
-    workdir = create_workdir(workdir_base=parameters.TOOL_CONFIG['workdir_base'])
-    print("Workdir = {}".format(workdir))
+        configs = run_config, build_config, job_config
+        filenames = "run", "build", "job"
+        for filename, config in zip(filenames, configs):
+            filename = os.path.join(run_config['workdir'],
+                                    '{}.json'.format(filename))
+            with open(filename, 'w', encoding='utf-8') as f:
+                json.dump(config, f, ensure_ascii=False, indent=4)
 
-    template_env = Environment(loader=FileSystemLoader('templates'))
-    
-    run_config_bases = product_dict(**parameters.RUN_CONFIG[0])
-    run_configs = []
-    #build_configs_dict = {}
-    build_config_id = 0
-
+def find_old_binaries():
     build_configs = []
+    build_config_id = 0
     if args.reuse_binaries:
-        import glob
         files = glob.glob(args.reuse_binaries + '/**/build.json')
         max_build_config_id = 0
         for build_config_path in files:
@@ -141,39 +124,73 @@ def main():
                 max_build_config_id = max(build_config_id, build_config['build_id'])
         build_config_id = max_build_config_id + 1
 
-    for run_id, run_config_base in enumerate(run_config_bases):
-        run_config = parameters.RUN_CONFIG[1](run_config_base)
-        build_config = parameters.RUN_CONFIG[2](run_config)
-        #build_config_s = json.dumps(build_config)
-        #if build_config_s not in build_configs_dict:
-        #    build_configs_dict[build_config_s] = build_config_id
-        #    build_config_id += 1
+    return build_configs
 
-        run_config['run_id'] = run_id
-        # TODO: Also append build config json to dict for debugging
+def render_jobscripts(workdir, template_env, run_configs, job_configs):
+    for job_config in job_configs:
+        tool_config = parameters.TOOL_CONFIG
+        template_name = parameters.JOB_CONFIG.job_file
+        template = template_env.get_template(template_name)
+        job_config['n_jobs'] = len(job_config['run_ids'])
+        run_configs_job = []
+        for run_id in job_config['run_ids']:
+            run_config = run_configs[run_id]
+            assert(run_config['run_id'] == run_id)
+            run_configs_job.append(run_config)
+            print(run_configs_job)
+            job_config['run_configs'] = run_configs_job
 
-        build_id = dict_subset_idx_in_list(build_config, build_configs)
-        if build_id < 0:
-            build_configs.append(build_config)
-            build_id = build_config_id
-            build_config_id += 1
-        build_config['built'] = False
-        build_config['build_id'] = build_id
-        run_config['build_id'] = build_id
+    #for job_config in job_configs:
+        file_name = "{id}_{template}".format(id=job_config['job_id'],
+                                            template=template_name)
+        file_name = format(os.path.join(workdir, file_name))
+        job_config['job_name'] += str(job_config['job_id'])
+        job_config['file_name'] = file_name
+        complete_config = {**tool_config, **job_config}
+        complete_config['workdir'] = workdir
+        print(complete_config)
+        print(file_name)
+        with open(file_name, 'w') as f:
+            f.write(template.render(complete_config, undefined=StrictUndefined))
+ 
+def main():
+    # Also search for modules in working dir
+    cwd = os.getcwd()
+    sys.path.append(cwd)
+    
+    parser = argparse.ArgumentParser(description='Create scripts from templates.')
+    parser.add_argument('--reuse-binaries', help='Use binaries in workdir.')
+    parser.add_argument('--dry-run', default=False, action='store_true',
+                        help='Only print configurations')
+    parser.add_argument("parameter_file", help="parameter file")
+    args = parser.parse_args()
 
-        run_configs.append(run_config)
+    # Load parameter settings from file
+    global parameters
+    parameters = importlib.import_module(args.parameter_file)
+    
+    if not args.dry_run:
+        parameters.TOOL_CONFIG['workdir_base'] = \
+            os.path.abspath(parameters.TOOL_CONFIG['workdir_base'])
+        os.makedirs(parameters.TOOL_CONFIG['workdir_base'], exist_ok=True)
+        workdir = create_workdir(workdir_base=parameters.TOOL_CONFIG['workdir_base'])
+        print("Workdir = {}".format(workdir))
 
+    template_env = Environment(loader=FileSystemLoader('templates'))
+    
+    run_configs, build_configs = parameters.RUN_CONFIG.make_configs()
+    job_configs = parameters.JOB_CONFIG.make_job_configs(run_configs, build_configs)
+    print(run_configs)
     print(build_configs)
+    print(job_configs)
+    if args.dry_run:
+        return
 
     create_dirs_from_id(workdir, 'build', build_configs)
     create_dirs_from_id(workdir, 'run', run_configs)
-    print(build_configs)
-    print()
-
-    print(run_configs)
 
     render_templates_from_dicts(template_env,
-                                parameters.BUILD_CONFIG,
+                                parameters.BUILD_CONFIG.build_files,
                                 parameters.TOOL_CONFIG,
                                 build_configs,
                                 executable=[True])
@@ -181,31 +198,31 @@ def main():
     symlink_build(run_configs, build_configs, parameters.TOOL_CONFIG)
 
     render_templates_from_dicts(template_env,
-                                parameters.RUN_CONFIG[3],
+                                parameters.RUN_CONFIG.run_files,
                                 parameters.TOOL_CONFIG,
                                 run_configs,
                                 executable=[True, False, False])
     
         
     # TODO(Lukas): Move this to function
-    job_config = parameters.JOB_CONFIG[0]
-    tool_config = parameters.TOOL_CONFIG
+    #job_config = parameters.JOB_CONFIG[0]
+    #tool_config = parameters.TOOL_CONFIG
 
-    template_name = parameters.JOB_CONFIG[1]
-    config = job_config
-    template = template_env.get_template(template_name)
+    #template_name = parameters.JOB_CONFIG[1]
+    #config = job_config
+    #template = template_env.get_template(template_name)
 
-    job_config['n_jobs'] = len(run_configs)
-    job_config['run_configs'] = run_configs
 
-    complete_config = {**tool_config, **job_config}
-    complete_config['workdir'] = workdir
-    file_name = os.path.join(workdir, template_name)
-    config['file_name'] = file_name
-    print(file_name)
-    with open(file_name, 'w') as f:
-        f.write(template.render(complete_config, undefined=StrictUndefined))
+    #job_config['n_jobs'] = len(run_configs)
+    #job_config['run_configs'] = run_configs
+    render_jobscripts(workdir,
+                      template_env,
+                      run_configs,
+                      job_configs)
 
+    # Make run config easy to analyze
+    write_config_as_json(run_configs, build_configs, job_configs)
+    
     # Create logdir
     os.makedirs(os.path.join(workdir, 'logs'))
 
