@@ -95,6 +95,19 @@ def symlink_build(run_configs, build_configs, tool_config):
                                  tool_config['executable_name'])
         os.symlink(src=src_path, dst=dst_path)
 
+def initialize_working_directory(run_configs, tool_config):
+    # Optional parameter!
+    if 'run_root' not in tool_config:
+        return
+    for run_config in run_configs:
+        wd = run_config['workdir']
+        run_root = tool_config['run_root']
+        files = glob.glob(run_root + "/*")
+        for filename in files:
+            basename = os.path.basename(filename)
+            dst = os.path.join(wd, basename)
+            os.symlink(src=filename, dst=dst)
+
 def write_config_as_json(run_configs, build_configs, job_configs):
     for run_config in run_configs:
         job_id = run_config['job_id']
@@ -196,6 +209,8 @@ def main():
                                 executable=[True])
     build(build_configs)
     symlink_build(run_configs, build_configs, parameters.TOOL_CONFIG)
+
+    initialize_working_directory(run_configs, parameters.TOOL_CONFIG)
 
     render_templates_from_dicts(template_env,
                                 parameters.RUN_CONFIG.run_files,
