@@ -32,7 +32,7 @@ ClusteredLts = 2
 OutputFile = 'output/conv'
 iOutputMask = 1 1 1 1 1 1 1 1 1      ! Variables ouptut
 iOutputMaskMaterial = 1 1 1          ! Material output
-Format = 6 !10                           ! Format (0=IDL, 1=TECPLOT, 2=IBM DX, 4=GiD))
+Format = 10 ! 6                           ! Format (0=IDL, 1=TECPLOT, 2=IBM DX, 4=GiD))
 refinement = 0
 Interval = 200                       ! Index of printed info at timesteps
 TimeInterval = 2                  ! Index of printed info at time

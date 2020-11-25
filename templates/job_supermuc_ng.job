@@ -20,6 +20,7 @@
 #SBATCH --time={{ time }}
 #SBATCH --export=NONE
  
+module load tempdir
 module load slurm_setup
 echo "My SLURM_ARRAY_TASK_ID: " $SLURM_ARRAY_TASK_ID
 

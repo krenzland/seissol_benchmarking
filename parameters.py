@@ -1,6 +1,7 @@
 run_params_base = {
-    'mesh_size': range(1,3),
-    'order': [5],
+    'mesh_size': range(1,8),
+    #'order': [3,4,5,6],
+    'order': [3],
     'material_file_base': ['/hppfs/work/pr45fi/ga24dib3/SeisSol/materials/material'],
     'scenario': ['snell'],
     'mesh_file_base': ['/hppfs/work/pr45fi/ga24dib3/SeisSol/meshes/convergence']
@@ -22,10 +23,10 @@ def build_config_from_run(run_config):
 job_params_base = {
     'time': '00:30:00',
     'project_id': 'pr45fi',
-    'email': 'email@example.com',
+    'email': 'lukas.krenz@in.tum.de',
     'nodes': 2,
     'ntasks_per_node': 1,
-    'partition': 'test',
+    'partition': 'micro',
     'job_name': 'eaconv'
 }
 
@@ -38,7 +39,7 @@ JOB_CONFIG = (job_params_base, 'job_supermuc_ng.job')
 BUILD_CONFIG = ['build.sh']
 
 TOOL_CONFIG = {
-    'workdir_base': '/hppfs/work/pr45fi/ga24dib3/SeisSol/convergence/',
+    'workdir_base': '/hppfs/work/pn68fi/ga24dib3/SeisSol/convergence/',
     'executable_name': 'SeisSol',
     'build_root': '/dss/dsshome1/0E/ga24dib3/src/SeisSol/'
 }
