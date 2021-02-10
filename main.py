@@ -52,7 +52,7 @@ def render_templates_from_dicts(template_env,
             print(file_name)
             with open(file_name, 'w') as f:
                 f.write(template.render(complete_config, undefined=StrictUndefined))
-            if ex:
+            if True or ex: # TODO(Lukas) Reenable this feature!
                 # chmod +x
                 st = os.stat(file_name)
                 os.chmod(file_name, st.st_mode | stat.S_IEXEC)
