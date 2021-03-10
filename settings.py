@@ -1,6 +1,6 @@
+from abc import ABC, abstractmethod
 from utils import product_dict, dict_subset_eq, dict_subset_idx_in_list
 from copy import deepcopy
-
 
 class RunConfigFactory:
     def __init__(self, base_params, process_run_config, make_build_config, run_files):
@@ -39,7 +39,6 @@ class RunConfigFactory:
             run_configs.append(run_config)
 
         return run_configs, build_configs
-            
 
 class BuildConfigFactory:
     def __init__(self, build_files):
@@ -75,4 +74,16 @@ class JobConfigFactory:
             job_config['run_ids'].append(run_config['run_id'])
 
         return job_configs
-        
+
+class Cluster(ABC):
+    @abstractmethod
+    def get_partition(self, number_of_nodes):
+        pass
+
+    @abstractmethod
+    def get_cores_per_node(self):
+        pass
+
+    @abstractmethod
+    def get_hyperthreading_factor(self):
+        pass

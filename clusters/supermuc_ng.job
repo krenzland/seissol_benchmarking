@@ -1,0 +1,44 @@
+#!/bin/bash
+#SBATCH --account={{ project_id }}
+#SBATCH --partition={{ partition }}
+#SBATCH --array=0-{{ n_jobs - 1 }}
+
+#SBATCH --nodes={{ nodes }}
+#SBATCH --ntasks-per-node={{ ranks_per_node }}
+#SBATCH --no-requeue
+
+#SBATCH -J {{ job_name }}
+
+#SBATCH -o {{ workdir }}/logs/%A_%a.out
+#SBATCH -e {{ workdir }}/logs/%A_%a.err
+
+#SBATCH -D {{ workdir }}
+
+#SBATCH --mail-type=BEGIN,END,ARRAY_TASKS
+#SBATCH --mail-user={{ email }}
+
+#SBATCH --time={{ time }}
+#SBATCH --export=NONE
+#SBATCH --get-user-env
+##SBATCH --ear=off
+ 
+source /etc/profile.d/modules.sh
+module load slurm_setup
+export LD_LIBRARY_PATH=/dss/dsshome1/0E/ga24dib3/lib:$LD_LIBRARY_PATH
+
+ulimit -Ss 2097152
+
+export MP_SINGLE_THREAD=no
+unset KMP_AFFINITY
+export OMP_NUM_THREADS={{ threads_per_rank }}
+export OMP_PLACES="cores({{ cores_per_rank }})"
+
+echo "My SLURM_ARRAY_TASK_ID: " $SLURM_ARRAY_TASK_ID
+
+RUN_SCRIPTS=() # array of all run scripts
+
+{% for run_config in run_configs %}
+RUN_SCRIPTS+={{ run_config.file_name_run}}
+{% endfor %}
+
+exec bash "${RUN_SCRIPTS[${SLURM_ARRAY_TASK_ID}]}"

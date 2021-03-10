@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-from utils import product_dict, dict_subset_eq, dict_subset_idx_in_list
+from utils import product_dict, dict_subset_eq, dict_subset_idx_in_list, find_file_in_path
 
 import importlib
 import argparse
@@ -12,10 +12,11 @@ import itertools
 from jinja2 import Environment, FileSystemLoader, StrictUndefined
 import json
 import glob
+from pathlib import Path
 
 def create_workdir(workdir_base):
     now = datetime.now()
-    name = now.strftime('%Y-%b-%d_%H-%M_{counter}')
+    name = now.strftime('%Y-%m-%d_%H-%M_{counter}')
     counter = 0
     while True:
         cur_name = os.path.join(workdir_base, name.format(counter=counter))
@@ -40,6 +41,7 @@ def create_dirs_from_id(workdir_root,
 def render_templates_from_dicts(template_env,
                                 template_names,
                                 tool_config,
+                                search_paths,
                                 configs,
                                 executable=[False]):
     for template_name, ex in zip(template_names, executable):
@@ -57,28 +59,25 @@ def render_templates_from_dicts(template_env,
                 st = os.stat(file_name)
                 os.chmod(file_name, st.st_mode | stat.S_IEXEC)
 
-def reuse_builds_from_dir(directory):
-    return []
-                
 def build(build_configs):
     for build_config in build_configs:
         if 'built' in build_config and build_config['built']:
             print('Skipping build, reusing {}'.format(build_config['file_name_build']))
             continue
-        print(build_config['workdir'])
-        result = subprocess.run(build_config['file_name_build'],
+        file_name_build = build_config["file_name_build"]
+        result = subprocess.run(file_name_build,
                                 cwd=build_config['workdir'] + '/',
                                 stdout=subprocess.PIPE,
                                 stderr=subprocess.PIPE)
-        if result.returncode != 0:
-            print('Job {} failed!'.format(build_config['workdir']))
         for log_name, log in zip(['out', 'err'],
                                  [result.stdout, result.stderr]):
             file_name = '{}.log'.format(log_name)
             file_path = os.path.join(build_config['workdir'], file_name)
             with open(file_path, 'wb') as f:
                 if log:
-                    f.write(log)
+                   f.write(log)
+        if result.returncode != 0:
+            raise Exception('Job {} failed!'.format(build_config['workdir']))
         build_config['built'] = True
         with open(os.path.join(build_config['workdir'], 'build.json'),
                   'w', encoding='utf-8') as f:
@@ -170,6 +169,9 @@ def main():
     # Also search for modules in working dir
     cwd = os.getcwd()
     sys.path.append(cwd)
+
+    # Find path of current python script
+    script_dir = Path(os.path.dirname(os.path.realpath(__file__)))
     
     parser = argparse.ArgumentParser(description='Create scripts from templates.')
     parser.add_argument('--reuse-binaries', help='Use binaries in workdir.')
@@ -181,7 +183,7 @@ def main():
     # Load parameter settings from file
     global parameters
     parameters = importlib.import_module(args.parameter_file)
-    
+
     if not args.dry_run:
         parameters.TOOL_CONFIG['workdir_base'] = \
             os.path.abspath(parameters.TOOL_CONFIG['workdir_base'])
@@ -189,7 +191,8 @@ def main():
         workdir = create_workdir(workdir_base=parameters.TOOL_CONFIG['workdir_base'])
         print("Workdir = {}".format(workdir))
 
-    template_env = Environment(loader=FileSystemLoader('templates'))
+    template_search_path = ['./templates/', script_dir / "clusters"] + parameters.TOOL_CONFIG["search_paths"]
+    template_env = Environment(loader=FileSystemLoader(template_search_path))
     
     run_configs, build_configs = parameters.RUN_CONFIG.make_configs()
     job_configs = parameters.JOB_CONFIG.make_job_configs(run_configs, build_configs)
@@ -202,9 +205,11 @@ def main():
     create_dirs_from_id(workdir, 'build', build_configs)
     create_dirs_from_id(workdir, 'run', run_configs)
 
+
     render_templates_from_dicts(template_env,
                                 parameters.BUILD_CONFIG.build_files,
                                 parameters.TOOL_CONFIG,
+				template_search_path,
                                 build_configs,
                                 executable=[True])
     build(build_configs)
@@ -215,6 +220,7 @@ def main():
     render_templates_from_dicts(template_env,
                                 parameters.RUN_CONFIG.run_files,
                                 parameters.TOOL_CONFIG,
+				template_search_path,
                                 run_configs,
                                 executable=[True, False, False])
     
