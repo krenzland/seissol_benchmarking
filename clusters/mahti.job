@@ -1,0 +1,42 @@
+#!/bin/bash
+#SBATCH --account={{ project_id }}
+#SBATCH --partition={{ partition }}
+#SBATCH --array=0-{{ n_jobs - 1 }}
+
+#SBATCH --nodes={{ nodes }}
+#SBATCH --ntasks-per-node={{ ranks_per_node }}
+#SBATCH --hint=multithread
+#SBATCH --cpus-per-task={{ 256 // ranks_per_node }}
+
+#SBATCH -J {{ job_name }}
+
+#SBATCH -o {{ workdir }}/logs/%A_%a.out
+#SBATCH -e {{ workdir }}/logs/%A_%a.err
+
+#SBATCH -D {{ workdir }}
+
+#SBATCH --mail-type=BEGIN,END,ARRAY_TASKS
+#SBATCH --mail-user={{ email }}
+
+#SBATCH --time={{ time }}
+ 
+#source /etc/profile.d/modules.sh
+
+ulimit -Ss unlimited
+
+export MP_SINGLE_THREAD=no
+unset KMP_AFFINITY
+export OMP_NUM_THREADS={{ threads_per_rank }}
+export OMP_PLACES="cores({{ cores_per_rank }})"
+
+echo "My SLURM_ARRAY_TASK_ID: " $SLURM_ARRAY_TASK_ID
+
+RUN_SCRIPTS=() # array of all run scripts
+
+{% for run_config in run_configs %}
+RUN_SCRIPTS+=({{ run_config.file_name_run}})
+{% endfor %}
+
+
+
+exec bash "${RUN_SCRIPTS[${SLURM_ARRAY_TASK_ID}]}"
