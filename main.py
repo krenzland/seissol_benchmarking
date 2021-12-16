@@ -3,6 +3,7 @@ from utils import product_dict, dict_subset_eq, dict_subset_idx_in_list, find_fi
 
 import importlib
 import argparse
+from collections import defaultdict
 import sys
 import os
 import stat
@@ -26,14 +27,30 @@ def create_workdir(workdir_base):
         except FileExistsError as err:
             counter += 1
 
+def create_unique_workdir_names(prefix, configs):
+    name_counter = defaultdict(int) # Counts how often a name does occur
+    id_key = "{}_id".format(prefix)
+    workdir_key = "{}_name".format(prefix)
+    # Ensure that all names are identical
+    for config in configs:
+        if workdir_key in config:
+            name = config[workdir_key]
+            name_counter[name] += 1
+            # User has name preference, follow it
+            counter = name_counter[name] - 1 # start by zero
+            config[workdir_key] = "{}_{}_{}".format(prefix, config[workdir_key], counter)
+        else:
+            # No name -> use default name
+            config[workdir_key] = "{}_{}".format(prefix, config[id_key])
+    return configs
+
 def create_dirs_from_id(workdir_root,
                         prefix,
                         configs):
-    id_name = "{}_id".format(prefix)
+    workdir_key = "{}_name".format(prefix)
     for config in configs:
         print(config)
-        workdir_name = "{}_{}".format(prefix,
-                                          config[id_name])
+        workdir_name = config[workdir_key]
         workdir_path = os.path.join(workdir_root, workdir_name)
         os.makedirs(workdir_path)
         config['workdir'] = workdir_path
@@ -196,6 +213,10 @@ def main():
     
     run_configs, build_configs = parameters.RUN_CONFIG.make_configs()
     job_configs = parameters.JOB_CONFIG.make_job_configs(run_configs, build_configs)
+
+    create_unique_workdir_names("build", build_configs)
+    create_unique_workdir_names("run", run_configs)
+
     print(run_configs)
     print(build_configs)
     print(job_configs)
