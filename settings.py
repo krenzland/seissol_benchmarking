@@ -16,9 +16,11 @@ class RunConfigFactory:
         run_configs = []
         run_id = 0
         build_config_id = len(build_configs)
-        for run_id, run_config_base in enumerate(self.run_configs_base):
+        for run_config_base in self.run_configs_base:
             run_config = self.process_run_config(run_config_base)
             build_config = self.make_build_config(run_config)
+            if not run_config:
+                continue
 
             #build_config_s = json.dumps(build_config)
             #if build_config_s not in build_configs_dict:
@@ -26,6 +28,7 @@ class RunConfigFactory:
             #    build_config_id += 1
 
             run_config['run_id'] = run_id
+            run_id += 1
 
             build_id = dict_subset_idx_in_list(build_config, build_configs)
             if build_id < 0:
