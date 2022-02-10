@@ -38,7 +38,8 @@ echo "My SLURM_ARRAY_TASK_ID: " $SLURM_ARRAY_TASK_ID
 RUN_SCRIPTS=() # array of all run scripts
 
 {% for run_config in run_configs %}
-RUN_SCRIPTS+={{ run_config.file_name_run}}
+RUN_SCRIPTS+=({{ run_config.file_name_run}})
 {% endfor %}
 
 exec bash "${RUN_SCRIPTS[${SLURM_ARRAY_TASK_ID}]}"
+

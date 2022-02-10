@@ -13,6 +13,8 @@ class SupermucNG(Cluster):
             return 'general'
         if 769 <= num_nodes <= 3072:
             return 'large'
+        if num_nodes > 3072:
+            return 'tmp2'
         raise ValueError('Unsupported number of nodes')
     
     def get_cores_per_node(self):
