@@ -69,6 +69,8 @@ def render_templates_from_dicts(template_env,
             file_name = os.path.join(config['workdir'], template_name)
             config['file_name_{}'.format(template_base)] = file_name
             print(file_name)
+            if os.path.exists(file_name) and os.path.islink(file_name):
+                os.remove(file_name)
             with open(file_name, 'w') as f:
                 f.write(template.render(complete_config, undefined=StrictUndefined))
             if True or ex: # TODO(Lukas) Reenable this feature!
@@ -88,7 +90,7 @@ def build(build_configs):
                                 stderr=subprocess.PIPE)
         for log_name, log in zip(['out', 'err'],
                                  [result.stdout, result.stderr]):
-            file_name = '{}.log'.format(log_name)
+            file_name = 'build.{}'.format(log_name)
             file_path = os.path.join(build_config['workdir'], file_name)
             with open(file_path, 'wb') as f:
                 if log:
@@ -106,9 +108,9 @@ def symlink_build(run_configs, build_configs, tool_config):
         build_config = build_configs[run_config['build_id']]
         executable_dir = build_config['workdir']
         src_path = os.path.join(build_config['workdir'],
-                                tool_config['executable_name'])
+                                build_config['executable_name'])
         dst_path = os.path.join(run_config['workdir'],
-                                 tool_config['executable_name'])
+                                 build_config['executable_name'])
         os.symlink(src=src_path, dst=dst_path)
 
 def initialize_working_directory(run_configs, tool_config):
@@ -169,7 +171,6 @@ def render_jobscripts(workdir, template_env, run_configs, job_configs):
             print(run_configs_job)
             job_config['run_configs'] = run_configs_job
 
-    #for job_config in job_configs:
         file_name = "{id}_{template}".format(id=job_config['job_id'],
                                             template=template_name)
         file_name = format(os.path.join(workdir, file_name))
@@ -211,7 +212,7 @@ def main():
     template_search_path = ['./templates/', script_dir / "clusters"] + parameters.TOOL_CONFIG["search_paths"]
     template_env = Environment(loader=FileSystemLoader(template_search_path))
     
-    run_configs, build_configs = parameters.RUN_CONFIG.make_configs()
+    run_configs, build_configs = parameters.RUN_CONFIG.make_configs(tool_config=parameters.TOOL_CONFIG)
     job_configs = parameters.JOB_CONFIG.make_job_configs(run_configs, build_configs)
 
     create_unique_workdir_names("build", build_configs)
@@ -230,7 +231,7 @@ def main():
     render_templates_from_dicts(template_env,
                                 parameters.BUILD_CONFIG.build_files,
                                 parameters.TOOL_CONFIG,
-				template_search_path,
+                                template_search_path,
                                 build_configs,
                                 executable=[True])
     build(build_configs)
@@ -241,22 +242,10 @@ def main():
     render_templates_from_dicts(template_env,
                                 parameters.RUN_CONFIG.run_files,
                                 parameters.TOOL_CONFIG,
-				template_search_path,
+                                template_search_path,
                                 run_configs,
                                 executable=[True, False, False])
     
-        
-    # TODO(Lukas): Move this to function
-    #job_config = parameters.JOB_CONFIG[0]
-    #tool_config = parameters.TOOL_CONFIG
-
-    #template_name = parameters.JOB_CONFIG[1]
-    #config = job_config
-    #template = template_env.get_template(template_name)
-
-
-    #job_config['n_jobs'] = len(run_configs)
-    #job_config['run_configs'] = run_configs
     render_jobscripts(workdir,
                       template_env,
                       run_configs,
