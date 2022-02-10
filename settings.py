@@ -10,20 +10,20 @@ class RunConfigFactory:
         self.run_files = run_files
         self.run_configs_base = list(product_dict(**base_params))
 
-    def make_configs(self, build_configs = None):
+    def make_configs(self, tool_config, build_configs = None):
         if build_configs is None:
             build_configs = []
         run_configs = []
         run_id = 0
         build_config_id = len(build_configs)
         for run_id, run_config_base in enumerate(self.run_configs_base):
+            # Make base settings from tool config availible
+            run_config = {**tool_config, **run_config_base}
+
             run_config = self.process_run_config(run_config_base)
             build_config = self.make_build_config(run_config)
-
-            #build_config_s = json.dumps(build_config)
-            #if build_config_s not in build_configs_dict:
-            #    build_configs_dict[build_config_s] = build_config_id
-            #    build_config_id += 1
+            # Make sure that tool keys are in build_config if not overwritten
+            build_config = {**tool_config, **build_config}
 
             run_config['run_id'] = run_id
 
