@@ -1,0 +1,32 @@
+#!/bin/bash
+#PJM --name {{ job_name }}
+#PJM -L "rscgrp={{ partition }}" # Specify resource group
+#PJM -L "elapse={{ time }}"
+#PJM -L "node={{ nodes }}" 
+#PJM --mpi "max-proc-per-node=4"  # Upper limit of number of MPI process created at 1 node
+
+#PJM -g {{ project_id }}               # group name
+
+#PJM -x PJM_LLIO_GFSCACHE=/vol0004 # volume names that job uses
+
+#PJM --out {{ workdir }}/logs/%n_%j_%J.out
+#PJM -j
+
+#PJM -m "b,e,S" # maybe only s?
+#PJM --mail-list "lukas.krenz@in.tum.de"
+
+#PJM -s
+
+#export PLE_MPI_STD_EMPTYFILE=off # Do not create a file if there is no output to stdout/stderr.
+
+export OMP_NUM_THREADS={{ threads_per_rank }}
+export OMP_PLACES="cores({{ cores_per_rank }})"
+
+
+ulimit -Ss 2097152
+
+{% for run_config in run_configs %}
+RUN_SCRIPTS+=({{ run_config.file_name_run}})
+{% endfor %}
+
+exec bash "${RUN_SCRIPTS[0]}"
