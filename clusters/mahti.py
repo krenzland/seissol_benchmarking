@@ -7,11 +7,11 @@ from settings import Cluster
 class Mahti(Cluster):
     def get_partition(self, num_nodes):
         # Never use test!
-        if 1 <= num_nodes < 20:
+        if 1 <= num_nodes <= 20:
             return 'medium'
-        if 20 <= num_nodes < 200:
+        if 20 < num_nodes <= 200:
             return 'large'
-        if 200 <= num_nodes <= 700:
+        if 200 < num_nodes <= 700:
             return 'gc'
         raise ValueError('Unsupported number of nodes')
     

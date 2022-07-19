@@ -11,7 +11,6 @@
 #SBATCH -J {{ job_name }}
 
 #SBATCH -o {{ workdir }}/logs/%A_%a.out
-#SBATCH -e {{ workdir }}/logs/%A_%a.err
 
 #SBATCH -D {{ workdir }}
 
