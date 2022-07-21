@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#i!/usr/bin/env python3
 from utils import product_dict, dict_subset_eq, dict_subset_idx_in_list, find_file_in_path
 
 import importlib
@@ -61,19 +61,18 @@ def render_templates_from_dicts(template_env,
                                 search_paths,
                                 configs,
                                 executable=[False]):
-    for template_name, ex in zip(template_names, executable):
+    for template_name in template_names:
         template_base, _ = os.path.splitext(template_name)
         template = template_env.get_template(template_name)
         for config in configs:
             complete_config = {**tool_config, **config}
             file_name = os.path.join(config['workdir'], template_name)
             config['file_name_{}'.format(template_base)] = file_name
-            print(file_name)
             if os.path.exists(file_name) and os.path.islink(file_name):
                 os.remove(file_name)
             with open(file_name, 'w') as f:
                 f.write(template.render(complete_config, undefined=StrictUndefined))
-            if True or ex: # TODO(Lukas) Reenable this feature!
+            if True: # TODO(Lukas) Reenable this feature!
                 # chmod +x
                 st = os.stat(file_name)
                 os.chmod(file_name, st.st_mode | stat.S_IEXEC)
