@@ -1,4 +1,4 @@
-#i!/usr/bin/env python3
+#!/usr/bin/env python3
 from utils import product_dict, dict_subset_eq, dict_subset_idx_in_list, find_file_in_path
 
 import importlib
