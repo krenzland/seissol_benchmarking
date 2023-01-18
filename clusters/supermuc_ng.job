@@ -20,7 +20,7 @@
 #SBATCH --time={{ time }}
 #SBATCH --export=NONE
 #SBATCH --get-user-env
-##SBATCH --ear=off
+#SBATCH --ear=off
  
 source /etc/profile.d/modules.sh
 module load slurm_setup
@@ -32,6 +32,8 @@ export MP_SINGLE_THREAD=no
 unset KMP_AFFINITY
 export OMP_NUM_THREADS={{ threads_per_rank }}
 export OMP_PLACES="cores({{ cores_per_rank }})"
+
+export I_MPI_SHM_HEAP_VSIZE=8192
 
 echo "My SLURM_ARRAY_TASK_ID: " $SLURM_ARRAY_TASK_ID
 
