@@ -113,12 +113,15 @@ def symlink_build(run_configs, build_configs, tool_config):
         os.symlink(src=src_path, dst=dst_path)
 
 def initialize_working_directory(run_configs, tool_config):
-    # Optional parameter!
-    if 'run_root' not in tool_config:
-        return
     for run_config in run_configs:
         wd = run_config['workdir']
-        run_root = tool_config['run_root']
+        if 'run_root' in run_config:
+            run_root = run_config['run_root']
+        elif 'run_root' in tool_config:
+            run_root = tool_config['run_root']
+        else:
+            continue
+
         files = glob.glob(run_root + "/*")
         for filename in files:
             basename = os.path.basename(filename)
