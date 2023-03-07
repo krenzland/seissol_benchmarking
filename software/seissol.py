@@ -13,4 +13,8 @@ def add_options_to_job_config(job_config_base, run_config, build_config, cluster
 
     job_config['threads_per_rank'] = cluster.get_hyperthreading_factor() * job_config['cores_per_rank']
 
+    # Hack: If cluster does not support array jobs, create a unique job config for each run
+    if not cluster.is_slurm_array_supported():
+      job_config['run_id'] = run_config['run_id']
+
     return job_config

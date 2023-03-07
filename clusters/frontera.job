@@ -1,0 +1,42 @@
+#!/bin/bash
+
+#SBATCH -J {{ job_name }}
+#SBATCH -o {{ workdir }}/logs/%A_%a.out
+## #SBATCH -e {{ workdir }}/logs/%A_%a.err
+
+###SBATCH --account={{ project_id }}
+#SBATCH --partition={{ partition }}
+##SBATCH --array=0-{{ n_jobs - 1 }} # frontera has no support for array jobs
+
+#SBATCH --nodes={{ nodes }}
+#SBATCH -n {{ nodes * ranks_per_node }}
+##SBATCH --ntasks-per-node={{ ranks_per_node }}
+
+#SBATCH -D {{ workdir }}
+
+#SBATCH --mail-type=BEGIN,END,ARRAY_TASKS
+#SBATCH --mail-user={{ email }}
+
+#SBATCH --time={{ time }}
+###SBATCH --export=NONE
+###SBATCH --get-user-env
+ 
+#export LD_LIBRARY_PATH=/dss/dsshome1/0E/ga24dib3/lib:$LD_LIBRARY_PATH
+
+ulimit -Ss 2097152
+
+export MP_SINGLE_THREAD=no
+unset KMP_AFFINITY
+export OMP_NUM_THREADS={{ threads_per_rank }}
+export OMP_PLACES="cores({{ cores_per_rank }})"
+
+export I_MPI_SHM_HEAP_VSIZE=8192
+
+echo "My SLURM_ARRAY_TASK_ID: " $SLURM_ARRAY_TASK_ID
+
+{% for run_config in run_configs %}
+RUN_SCRIPTS+=({{ run_config.file_name_run}})
+{% endfor %}
+
+exec bash "${RUN_SCRIPTS[0]}"
+

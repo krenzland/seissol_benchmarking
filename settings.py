@@ -87,3 +87,6 @@ class Cluster(ABC):
     @abstractmethod
     def get_hyperthreading_factor(self):
         pass
+
+    def is_slurm_array_supported(self):
+        return True
